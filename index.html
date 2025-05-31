@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Phong Lighting Project</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+    }
+    #gl-canvas {
+      border: 1px solid #fff;
+    }
+    #controls {
+      margin-top: 10px;
+    }
+    button, select, input {
+      margin: 5px;
+      padding: 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Phong Lighting with Shape & Color Control</h1>
+
+  <canvas id="gl-canvas" width="512" height="512">
+    Your browser doesn't support HTML5 canvas.
+  </canvas>
+
+  <div id="controls">
+    <label for="colorPicker">Color:</label>
+    <input type="color" id="colorPicker" value="#ff0000">
+
+    <select id="shapeSelect">
+      <option value="cube" selected>Cube</option>
+      <option value="pyramid">Pyramid</option>
+    </select>
+
+    <button id="xButton">Rotate X</button>
+    <button id="yButton">Rotate Y</button>
+    <button id="zButton">Rotate Z</button>
+    <button id="stopButton">Stop Spinning</button>
+  </div>
+
+  <!-- Vertex Shader -->
+  <script id="vertex-shader" type="x-shader/x-vertex">
+    attribute vec4 vPosition;
+    attribute vec3 vNormal;
+
+    varying vec3 fNormal;
+    varying vec3 fPosition;
+
+    uniform vec3 theta;
+
+    void main() {
+      vec3 angles = radians(theta);
+      vec3 c = cos(angles);
+      vec3 s = sin(angles);
+
+      mat4 rx = mat4(
+        1, 0, 0, 0,
+        0, c.x, s.x, 0,
+        0, -s.x, c.x, 0,
+        0, 0, 0, 1
+      );
+
+      mat4 ry = mat4(
+        c.y, 0, -s.y, 0,
+        0, 1, 0, 0,
+        s.y, 0, c.y, 0,
+        0, 0, 0, 1
+      );
+
+      mat4 rz = mat4(
+        c.z, -s.z, 0, 0,
+        s.z, c.z, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      );
+
+      mat4 rotation = rz * ry * rx;
+      gl_Position = rotation * vPosition;
+
+      fPosition = vec3(gl_Position);
+      fNormal = mat3(rotation) * vNormal;
+    }
+  </script>
+
+  <!-- Fragment Shader -->
+  <script id="fragment-shader" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec3 fNormal;
+    varying vec3 fPosition;
+
+    uniform vec4 uColor;
+    uniform vec3 lightPosition;
+
+    uniform float ka;
+    uniform float kd;
+    uniform float ks;
+    uniform float shininess;
+
+    void main() {
+      vec3 N = normalize(fNormal);
+      vec3 L = normalize(lightPosition - fPosition);
+      vec3 E = normalize(-fPosition);
+      vec3 R = reflect(-L, N);
+
+      float diff = max(dot(N, L), 0.0);
+      float spec = pow(max(dot(R, E), 0.0), shininess);
+
+      vec4 ambient  = ka * uColor;
+      vec4 diffuse  = kd * uColor * diff;
+      vec4 specular = ks * vec4(1.0) * spec;
+
+      gl_FragColor = ambient + diffuse + specular;
+    }
+  </script>
+
+  <!-- External Scripts -->
+  <script src="webgl-utils.js"></script>
+  <script src="initShaders.js"></script>
+  <script src="MV.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
